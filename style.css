@@ -1,4 +1,3 @@
-/* Główne kolory */
 :root {
     --primary-bg: #1A1B1E;      /* Ciemne tło */
     --secondary-bg: #2D2D34;    /* Tło nawigacji i elementów */
@@ -8,14 +7,12 @@
     --nav-hover: #FF6B6B;       /* Hover dla nawigacji */
 }
 
-/* Podstawowe style */
 body {
     background-color: var(--primary-bg);
     color: var(--text-primary);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Header */
 header {
     background-color: var(--secondary-bg);
     border-bottom: 3px solid var(--accent-color);
@@ -29,7 +26,6 @@ header h1 {
     letter-spacing: 2px;
 }
 
-/* Nawigacja */
 .navbar {
     background-color: var(--secondary-bg);
     padding: 0.5rem 1rem;
@@ -67,7 +63,6 @@ header h1 {
     width: 70%;
 }
 
-/* Treść główna */
 article {
     background-color: var(--secondary-bg);
 }
@@ -83,14 +78,27 @@ article p {
     line-height: 1.6;
 }
 
-/* Footer */
+article li {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+article a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+article a:hover {
+    text-decoration: underline;
+    color: var(--nav-hover);
+}
+
 footer {
     background-color: var(--secondary-bg);
     color: var(--text-secondary);
     border-top: 3px solid var(--accent-color);
 }
 
-/* Responsywność */
 @media (max-width: 991.98px) {
     .navbar-toggler {
         background-color: var(--accent-color);
@@ -109,7 +117,6 @@ footer {
     }
 }
 
-/* Dodatkowe animacje i efekty */
 h1, h2, .nav-link {
     transition: all 0.3s ease;
 }
