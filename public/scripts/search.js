@@ -5,6 +5,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const loader = document.getElementById('loader');
     const template = document.getElementById('animeCardTemplate');
 
+    // Funkcja do znalezienia odpowiadającego tytułu w danych Shinden
+    function findShindenMatch(shindenData, malTitle) {
+        if (!shindenData || !Array.isArray(shindenData)) return null;
+        
+        const normalizedMalTitle = malTitle.toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return shindenData.find(item => {
+            if (!item || !item.title) return false;
+            
+            const normalizedShindenTitle = item.title.toLowerCase()
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            return normalizedShindenTitle.includes(normalizedMalTitle) || 
+                   normalizedMalTitle.includes(normalizedShindenTitle) ||
+                   normalizedShindenTitle === normalizedMalTitle;
+        });
+    }
+
+    // Funkcja do obliczania średniej oceny
+    function calculateAverageRating(malRating, shindenMatch) {
+        let ratings = [];
+        
+        if (malRating) {
+            ratings.push(malRating);
+        }
+        
+        if (shindenMatch && shindenMatch.rating && !isNaN(shindenMatch.rating)) {
+            ratings.push(shindenMatch.rating);
+        }
+        
+        if (ratings.length === 0) {
+            return null;
+        }
+        
+        const average = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+        return average.toFixed(2);
+    }
+
     async function searchAnime(query) {
         try {
             loader.classList.remove('d-none');
@@ -23,9 +66,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 data.data.forEach(item => {
                     if (!item?.node) return;
                     const anime = item.node;
+                    const shindenMatch = findShindenMatch(data.shindenData, anime.title);
                     
                     const clone = template.content.cloneNode(true);
                     
+                    // Dodanie obrazka
                     if (anime.main_picture?.medium) {
                         const img = document.createElement('img');
                         img.src = anime.main_picture.medium;
@@ -35,23 +80,40 @@ document.addEventListener('DOMContentLoaded', function() {
                         cardBody.parentNode.insertBefore(img, cardBody);
                     }
 
+                    // Podstawowe informacje
                     clone.querySelector('.card-title').textContent = anime.title;
                     clone.querySelector('.card-text').textContent = anime.synopsis 
                         ? (anime.synopsis.length > 200 ? anime.synopsis.substring(0, 200) + '...' : anime.synopsis)
                         : 'Brak opisu';
-                    clone.querySelector('.rating').textContent = anime.mean 
-                        ? anime.mean.toFixed(2) 
-                        : 'Brak oceny';
 
+                    // Przygotowanie tekstu ocen
+                    const malRating = anime.mean;
+                    const shindenRating = shindenMatch?.rating;
+                    const averageRating = calculateAverageRating(malRating, shindenMatch);
+
+                    // Wyświetlanie ocen
+                    const ratingElement = clone.querySelector('.rating');
+                    ratingElement.innerHTML = `
+                        ${averageRating ? `Średnia: ${averageRating}` : 'Brak ocen'}
+                    `;
+
+                    // Dodatkowe informacje
                     const details = document.createElement('div');
                     details.classList.add('mt-2', 'text-muted');
                     details.innerHTML = `
                         <small>
                             ${anime.media_type ? `Typ: ${anime.media_type.toUpperCase()}<br>` : ''}
                             ${anime.num_episodes ? `Odcinki: ${anime.num_episodes}<br>` : ''}
-                            <a href="https://myanimelist.net/anime/${anime.id}" target="_blank" class="mal-link">
-                                Zobacz na MyAnimeList <i class="fas fa-external-link-alt"></i>
-                            </a>
+                            <div class="anime-links">
+                                <a href="https://myanimelist.net/anime/${anime.id}" target="_blank" class="mal-link">
+                                    <i class="fas fa-external-link-alt"></i> MyAnimeList
+                                </a>
+                                ${shindenMatch ? `
+                                    <a href="${shindenMatch.url}" target="_blank" class="shinden-link">
+                                        <i class="fas fa-external-link-alt"></i> Shinden
+                                    </a>
+                                ` : ''}
+                            </div>
                         </small>
                     `;
                     clone.querySelector('.card-body').appendChild(details);
