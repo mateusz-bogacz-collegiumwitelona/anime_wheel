@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +12,13 @@
     <header class="text-center py-3">
         <h1>Anime Wheel</h1>
     </header>
-    <nav class="navbar navbar-expand-lg ">
+    <nav class="navbar navbar-expand-lg">
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" >
+        <div class="collapse navbar-collapse">
             <ul class="navbar-nav">
-                <li class="nav-item active">
+                <li class="nav-item">
                     <a class="nav-link" href="./index.html">Strona główna</a>
                 </li>
                 <li class="nav-item">
@@ -27,7 +27,7 @@
                 <li class="nav-item">
                     <a class="nav-link" href="./sezons.html">Sezony</a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item active">
                     <a class="nav-link" href="./search.html">Wyszukaj</a>
                 </li>
                 <li class="nav-item">
@@ -40,100 +40,57 @@
         </div>
     </nav>
 
-<div class="container-fluid flex-grow-1 d-flex p-0">
-    <article class="p-4 w-100">
-        <h2>Wyszukaj anime</h2>
+    <div class="container-fluid flex-grow-1 d-flex p-0">
+        <article class="p-4 w-100">
+            <h2>Wyszukaj anime</h2>
 
-        <div class="search-container mb-4">
-            <div class="input-group">
-                <input type="text" id="searchInput" class="form-control" placeholder="Wpisz tytuł anime...">
-                <div class="input-group-append">
-                    <button class="btn btn-primary" type="button" id="searchButton" style="background-color: var(--accent-color); border-color: var(--accent-color);">
-                        Szukaj
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="loader" class="text-center d-none">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Ładowanie...</span>
-            </div>
-        </div>
-
-        <div id="searchResults" class="row">
-        </div>
-
-        <template id="animeCardTemplate">
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card h-100" style="background-color: var(--secondary-bg); border: 1px solid var(--accent-color);">
-                    <div class="card-body">
-                        <h5 class="card-title" style="color: var(--accent-color);"></h5>
-                        <p class="card-text" style="color: var(--text-secondary);"></p>
-                        <div class="mt-2">
-                            <span class="badge" style="background-color: var(--accent-color);">
-                                Ocena: <span class="rating"></span>
-                            </span>
-                        </div>
+            <div class="search-container mb-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Wpisz tytuł anime...">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="button" id="searchButton" style="background-color: var(--accent-color); border-color: var(--accent-color);">
+                            Szukaj
+                        </button>
                     </div>
                 </div>
             </div>
-        </template>
-        
-    </article>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-        const searchInput = document.getElementById('searchInput');
-        const searchButton = document.getElementById('searchButton');
-        const searchResults = document.getElementById('searchResults');
-        const loader = document.getElementById('loader');
-        const template = document.getElementById('animeCardTemplate');
+            <div id="loader" class="text-center d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Ładowanie...</span>
+                </div>
+            </div>
 
-        async function searchAnime(query) {
-            try {
-                loader.classList.remove('d-none');
-                searchResults.innerHTML = '';
+            <div id="searchResults" class="row">
+                <!-- Wyniki wyszukiwania będą tutaj -->
+            </div>
 
-                const response = await fetch(`/api/anime/search?query=${encodeURIComponent(query)}`);
-                const data = await response.json();
+            <template id="animeCardTemplate">
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100" style="background-color: var(--secondary-bg); border: 1px solid var(--accent-color);">
+                        <!-- Miejsce na obrazek -->
+                        <div class="card-body">
+                            <h5 class="card-title" style="color: var(--accent-color);"></h5>
+                            <p class="card-text" style="color: var(--text-secondary);"></p>
+                            <div class="mt-2">
+                                <span class="badge" style="background-color: var(--accent-color);">
+                                    Ocena: <span class="rating"></span>
+                                </span>
+                            </div>
+                            <!-- Miejsce na dodatkowe informacje -->
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </article>
+    </div>
 
-                if (Array.isArray(data)) {
-                    data.forEach(anime => {
-                        const clone = template.content.cloneNode(true);
-                        
-                        clone.querySelector('.card-title').textContent = anime.title;
-                        clone.querySelector('.card-text').textContent = 
-                            anime.synopsis ? anime.synopsis.substring(0, 200) + '...' : 'Brak opisu';
-                        clone.querySelector('.rating').textContent = 
-                            anime.rating ? anime.rating.toFixed(2) : 'Brak oceny';
-
-                        searchResults.appendChild(clone);
-                    });
-                }
-            } catch (error) {
-                console.error('Błąd:', error);
-                searchResults.innerHTML = '<div class="col-12"><p class="text-danger">Wystąpił błąd podczas wyszukiwania.</p></div>';
-            } finally {
-                loader.classList.add('d-none');
-            }
-        }
-
-        searchButton.addEventListener('click', () => {
-            const query = searchInput.value.trim();
-            if (query) {
-                searchAnime(query);
-            }
-        });
-
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const query = searchInput.value.trim();
-                if (query) {
-                    searchAnime(query);
-                }
-            }
-        });
-});
-</script>
+    <!-- Bootstrap JS i jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- Główny skrypt -->
+    <script src="./scripts/search.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "anime_wheel",
+  "version": "1.0.0",
+  "description": "Jest to strona internetowa poświęcona anime która ma za zadanie:\r - zbierać opinie \r - wyszukiwać informacji o danych anime \r - pomóc wybrać co możesz obejrzeć",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mateusz-bogacz-collegiumwitelona/anime_wheel.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mateusz-bogacz-collegiumwitelona/anime_wheel/issues"
+  },
+  "homepage": "https://github.com/mateusz-bogacz-collegiumwitelona/anime_wheel#readme",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
