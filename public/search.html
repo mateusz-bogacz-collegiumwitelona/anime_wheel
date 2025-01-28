@@ -44,19 +44,17 @@
         <article class="p-4 w-100">
             <h2>Wyszukaj anime</h2>
 
-            <div class="search-container mb-4">
-                <div class="input-group">
+            <div class="container-fluid flex-grow-1 d-flex p-0">
+                <div class="input-group w-100">
                     <input type="text" id="searchInput" class="form-control" placeholder="Wpisz tytuł anime...">
                     <div class="input-group-append">
-                        <button class="btn btn-primary" type="button" id="searchButton" style="background-color: var(--accent-color); border-color: var(--accent-color);">
-                            Szukaj
-                        </button>
+                        <button class="btn btn-primary" type="button" id="searchButton">Szukaj</button>
                     </div>
                 </div>
             </div>
 
             <div id="loader" class="text-center d-none">
-                <div class="spinner-border text-primary" role="status">
+                <div class="spinner-border text-primary" id="spinner" role="status">
                     <span class="sr-only">Ładowanie...</span>
                 </div>
             </div>
@@ -85,12 +83,19 @@
         </article>
     </div>
 
-    <!-- Bootstrap JS i jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     
-    <!-- Główny skrypt -->
-    <script src="./scripts/search.js"></script>
+    <script src="./scripts/animeDisplay.js"></script>
+    <script src="./scripts/searchAnime.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            const searchAnime = new SearchAnime('#searchInput', '#searchButton', '#searchResults', '#loader', '#animeCardTemplate');
+            searchAnime.searchAnime();
+        });
+    </script>
+
 </body>
 </html>

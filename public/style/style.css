@@ -177,3 +177,31 @@ template span .badge {
     text-decoration: none;
     background-color: rgba(255, 107, 107, 0.1);
 }
+
+.input-group {
+    display: flex; 
+    width: 100%; /
+    max-width: 600px; 
+    margin: 0 auto 10px auto; 
+}
+
+#searchInput {
+    flex: 1; 
+    margin-bottom: 0; 
+}
+
+.input-group-append .btn {
+    height: 100%; 
+    margin-bottom: 0; 
+}
+
+#searchButton {
+    background-color: var(--accent-color);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+}
+
+#spinner {
+    margin-top: 5px;
+    color: var(--accent-color);
+}
