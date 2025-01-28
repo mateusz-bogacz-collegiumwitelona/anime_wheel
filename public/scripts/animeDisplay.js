@@ -16,8 +16,8 @@ class AnimeDisplay {
     showError(message) {
         this.container.innerHTML = `
             <div class="col-12">
-                <div class="alert alert-danger" role="alert">
-                    <h4 class="alert-heading">Wystąpił błąd!</h4>
+                <div class="error-alert">
+                    <h4 class="error-alert-heading">Wystąpił błąd!</h4>
                     <p>Nie udało się pobrać danych. Spróbuj ponownie później.</p>
                     <hr>
                     <p class="mb-0">Szczegóły błędu: ${message}</p>
@@ -26,6 +26,7 @@ class AnimeDisplay {
     }
 
     findShindenMatch(shindenData, malTitle) {
+        // Ta metoda pozostaje bez zmian, nie zawiera stylów
         if (!shindenData || !Array.isArray(shindenData)) return null;
         
         const normalizedMalTitle = malTitle.toLowerCase()
@@ -48,6 +49,7 @@ class AnimeDisplay {
     }
 
     calculateAverageRating(malRating, shindenMatch) {
+        // Ta metoda pozostaje bez zmian, nie zawiera stylów
         let ratings = [];
         
         if (malRating) {
@@ -68,8 +70,9 @@ class AnimeDisplay {
 
     createAnimeCard(anime, shindenMatch) {
         const clone = this.template.content.cloneNode(true);
+        const card = clone.querySelector('.card');
+        card.classList.add('anime-card');
         
-        // Dodanie obrazka
         if (anime.main_picture?.medium) {
             const img = document.createElement('img');
             img.src = anime.main_picture.medium;
@@ -79,18 +82,15 @@ class AnimeDisplay {
             cardBody.parentNode.insertBefore(img, cardBody);
         }
 
-        // Podstawowe informacje
         clone.querySelector('.card-title').textContent = anime.title;
         clone.querySelector('.card-text').textContent = anime.synopsis 
             ? (anime.synopsis.length > 200 ? anime.synopsis.substring(0, 200) + '...' : anime.synopsis)
             : 'Brak opisu';
 
-        // Przygotowanie tekstu ocen
         const malRating = anime.mean;
         const shindenRating = shindenMatch?.rating;
         const averageRating = this.calculateAverageRating(malRating, shindenMatch);
 
-        // Wyświetlanie ocen
         const ratingElement = clone.querySelector('.rating');
         ratingElement.innerHTML = `
             ${malRating ? `MAL: ${malRating.toFixed(2)}` : 'MAL: brak'}<br>
@@ -98,7 +98,6 @@ class AnimeDisplay {
             ${averageRating ? `Średnia: ${averageRating}` : 'Brak ocen'}
         `;
 
-        // Dodatkowe informacje
         const details = document.createElement('div');
         details.classList.add('mt-2', 'text-muted');
         details.innerHTML = `
@@ -130,7 +129,7 @@ class AnimeDisplay {
         this.clearContainer();
         
         if (!animeList || animeList.length === 0) {
-            this.container.innerHTML = '<div class="col-12"><p class="text-center">Nie znaleziono żadnych anime.</p></div>';
+            this.container.innerHTML = '<div class="col-12"><p class="no-results">Nie znaleziono żadnych anime.</p></div>';
             return;
         }
 

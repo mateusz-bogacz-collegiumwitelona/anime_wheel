@@ -11,46 +11,88 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Funkcja pomocnicza do ponawiania prób
-async function retry(fn, retries = 3, delay = 1000) {
+const rateLimiter = {
+    tokens: 10,
+    lastRefill: Date.now(),
+    refillRate: 1000, 
+    maxTokens: 10,
+    
+    async getToken() {
+        const now = Date.now();
+        const timePassed = now - this.lastRefill;
+        const refillTokens = Math.floor(timePassed / this.refillRate);
+        
+        if (refillTokens > 0) {
+            this.tokens = Math.min(this.maxTokens, this.tokens + refillTokens);
+            this.lastRefill = now;
+        }
+        
+        if (this.tokens > 0) {
+            this.tokens--;
+            return true;
+        }
+        
+        return false;
+    }
+};
+
+async function retry(fn, retries = 3, initialDelay = 2000) {
     for (let i = 0; i < retries; i++) {
         try {
+            while (!(await rateLimiter.getToken())) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
             return await fn();
         } catch (error) {
             if (i === retries - 1) throw error;
+            
+            const delay = initialDelay * Math.pow(2, i);
             console.log(`Próba ${i + 1} nieudana, ponawiam za ${delay}ms...`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            // Zwiększamy opóźnienie z każdą próbą
-            delay *= 2;
         }
     }
 }
 
-// Cache dla wyników Shinden
 const shindenCache = new Map();
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
-// Funkcja pomocnicza do dodania opóźnienia
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+function getCacheKey(title) {
+    return title.toLowerCase().trim();
+}
 
-// Funkcja do bezpiecznego wyszukiwania w Shinden z cache
-async function safeSearchShinden(title) {
-    // Sprawdź cache
-    if (shindenCache.has(title)) {
-        return shindenCache.get(title);
+function getFromCache(title) {
+    const key = getCacheKey(title);
+    const cached = shindenCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
+        return cached.data;
     }
+    shindenCache.delete(key);
+    return null;
+}
+
+function setInCache(title, data) {
+    const key = getCacheKey(title);
+    shindenCache.set(key, {
+        data,
+        timestamp: Date.now()
+    });
+}
+
+async function safeSearchShinden(title) {
+    const cached = getFromCache(title);
+    if (cached) return cached;
 
     try {
-        // Zwiększamy podstawowe opóźnienie do 1-2s
-        await delay(1000 + Math.random() * 1000);
+        await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
         
-        // Używamy systemu retry dla zapytań do Shinden
         const shindenData = await retry(async () => {
             const data = await searchShinden(title);
             if (!data || !data._searchResults) {
                 throw new Error('Invalid response from Shinden');
             }
             return data;
-        }, 3, 2000);
+        }, 3);
 
         if (shindenData && shindenData._searchResults) {
             const results = shindenData._searchResults.map(result => ({
@@ -60,20 +102,18 @@ async function safeSearchShinden(title) {
                 rating: result._rating,
                 url: result._seriesURL.href
             }));
-            // Zapisz w cache
-            shindenCache.set(title, results);
+            
+            setInCache(title, results);
             return results;
         }
     } catch (err) {
         console.error(`Error fetching Shinden data for ${title}:`, err);
-        // Zapisz pusty wynik do cache, żeby nie próbować ponownie
-        shindenCache.set(title, []);
+        setInCache(title, []);
         return [];
     }
     return [];
 }
 
-// Endpoint proxy dla MAL i Shinden API - wyszukiwanie
 app.get('/api/anime/search', async (req, res) => {
     try {
         const { query } = req.query;
@@ -82,7 +122,6 @@ app.get('/api/anime/search', async (req, res) => {
             return res.status(400).json({ error: "Parametr 'query' jest wymagany." });
         }
 
-        // Pobierz dane z MAL
         const malResponse = await axios.get('https://api.myanimelist.net/v2/anime', {
             params: {
                 q: query,
@@ -94,7 +133,6 @@ app.get('/api/anime/search', async (req, res) => {
             }
         });
 
-        // Pobierz dane z Shinden
         let shindenResults = [];
         try {
             shindenResults = await safeSearchShinden(query);
@@ -102,22 +140,18 @@ app.get('/api/anime/search', async (req, res) => {
             console.error('Shinden API error:', shindenError);
         }
 
-        const response = {
+        res.json({
             data: malResponse.data.data,
             shindenData: shindenResults
-        };
-
-        res.json(response);
+        });
     } catch (error) {
         console.error('Error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Wystąpił błąd podczas pobierania danych.' });
     }
 });
 
-// Endpoint do losowych anime
 app.get('/api/anime/random', async (req, res) => {
     try {
-        // Pobierz top 100 anime z MAL
         const malResponse = await axios.get('https://api.myanimelist.net/v2/anime/ranking', {
             params: {
                 ranking_type: 'all',
@@ -129,42 +163,35 @@ app.get('/api/anime/random', async (req, res) => {
             }
         });
 
-        // Losowo wybierz 6 anime
         const shuffled = malResponse.data.data
             .sort(() => 0.5 - Math.random())
             .slice(0, 6);
 
-        // Pobierz dane z Shinden sekwencyjnie
         let shindenResults = [];
         for (const anime of shuffled) {
             try {
                 const results = await safeSearchShinden(anime.node.title);
                 shindenResults = [...shindenResults, ...results];
-                // Dodatkowe opóźnienie między kolejnymi anime
-                await delay(500);
+                await new Promise(resolve => setTimeout(resolve, 500));
             } catch (error) {
                 console.error(`Error processing ${anime.node.title}:`, error);
             }
         }
 
-        const response = {
+        res.json({
             data: shuffled,
             shindenData: shindenResults
-        };
-
-        res.json(response);
+        });
     } catch (error) {
         console.error('Error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Wystąpił błąd podczas pobierania losowych anime.' });
     }
 });
 
-// Endpoint do listy top anime
 app.get('/api/anime/top', async (req, res) => {
     try {
         const { limit = 50, offset = 0 } = req.query;
 
-        // Pobierz top anime z MAL
         const malResponse = await axios.get('https://api.myanimelist.net/v2/anime/ranking', {
             params: {
                 ranking_type: 'all',
@@ -177,9 +204,8 @@ app.get('/api/anime/top', async (req, res) => {
             }
         });
 
-        // Pobierz dane z Shinden równolegle dla grup po 6 anime
         const malData = malResponse.data.data;
-        const batchSize = 6;
+        const batchSize = 5; 
         let shindenResults = [];
 
         for (let i = 0; i < malData.length; i += batchSize) {
@@ -187,65 +213,23 @@ app.get('/api/anime/top', async (req, res) => {
             const batchPromises = batch.map(anime => safeSearchShinden(anime.node.title));
             const batchResults = await Promise.all(batchPromises);
             shindenResults = [...shindenResults, ...batchResults.flat()];
+
+            if (i + batchSize < malData.length) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
         }
 
-        const response = {
+        res.json({
             data: malResponse.data.data,
             shindenData: shindenResults,
             paging: {
                 previous: offset > 0 ? `/api/anime/top?limit=${limit}&offset=${Math.max(0, offset - limit)}` : null,
                 next: `/api/anime/top?limit=${limit}&offset=${parseInt(offset) + parseInt(limit)}`
             }
-        };
-
-        res.json(response);
+        });
     } catch (error) {
         console.error('Error:', error.response?.data || error.message);
         res.status(500).json({ error: 'Wystąpił błąd podczas pobierania top anime.' });
-    }
-});
-
-// Endpoint do listy sezonów
-app.get('/api/anime/seasons', async (req, res) => {
-    try {
-        const { year = new Date().getFullYear(), season = 'winter' } = req.query;
-
-        // Pobierz anime z danego sezonu z MAL
-        const malResponse = await axios.get(`https://api.myanimelist.net/v2/anime/season/${year}/${season}`, {
-            params: {
-                limit: 100,
-                fields: 'id,title,main_picture,synopsis,mean,media_type,num_episodes,start_season,status'
-            },
-            headers: {
-                'X-MAL-CLIENT-ID': process.env.MAL_CLIENT_ID
-            }
-        });
-
-        // Pobierz dane z Shinden równolegle dla grup po 6 anime
-        const malData = malResponse.data.data;
-        const batchSize = 6;
-        let shindenResults = [];
-
-        for (let i = 0; i < malData.length; i += batchSize) {
-            const batch = malData.slice(i, i + batchSize);
-            const batchPromises = batch.map(anime => safeSearchShinden(anime.node.title));
-            const batchResults = await Promise.all(batchPromises);
-            shindenResults = [...shindenResults, ...batchResults.flat()];
-        }
-
-        const response = {
-            data: malResponse.data.data,
-            shindenData: shindenResults,
-            season: {
-                year,
-                season
-            }
-        };
-
-        res.json(response);
-    } catch (error) {
-        console.error('Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Wystąpił błąd podczas pobierania anime z sezonu.' });
     }
 });
 
